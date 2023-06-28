@@ -9,17 +9,20 @@ display_height = 850
 clock = pygame.time.Clock()
 pygame.init()
 screen = pygame.display.set_mode((display_width,display_height))
-pygame.display.set_caption('pygame.display.set_caption')
+pygame.display.set_caption('Prototype')
 
 # miscellaneous variables
 menu = True
 restart_screen = False
+options_screen = False
+added_player = False
 game = False
 score = 0
 dead = False
-respawned = False
+respawned = True
 big_font = pygame.font.SysFont("display", 32)
 small_font = pygame.font.SysFont("Calibri", 25)
+button_font = pygame.font.Font(None, 36)
 
 # colours
 red = (255, 0,0)
@@ -106,7 +109,7 @@ class Platform(pygame.sprite.Sprite):
         self.rect.x -= 2
 
 # --Functions-- # -------------------------------------------------------------------------------------------------------------------------------
-key_state = { # holding key down
+key_state = {
 }
 def key_held(k):
     if k in key_state:
@@ -119,6 +122,7 @@ def spawn():
     global boss
     global player
     global enemy
+    global added_player
 
     # enemies
     for x in range(10):
@@ -126,16 +130,18 @@ def spawn():
         enemy_group.add(enemy)
 
     # boss
-    boss = Boss()
-    boss_group.add(boss)
-    boss.rect.x = 1000
-    boss.rect.y = 350
+        boss = Boss()
+        boss_group.add(boss)
+        boss.rect.x = 1000
+        boss.rect.y = 350
 
     # player
-    player = Player()
-    player.rect.y = 1
-    player_group.add(player)
-    player.rect.x = 200
+    if added_player == False:
+        player = Player()
+        player.rect.y = 1
+        player_group.add(player)
+        player.rect.x = 200
+        added_player = True
 
 def read_records():
     records = []
@@ -157,10 +163,9 @@ def update_leaderboard(name, score, difficulty):
     records.sort(key=lambda x: int(x[1]), reverse=True)
     write_records(records)
 
-
 # -----Sprites----- # -------------------------------------------------------------------------------------------------------------------------------
 
-pygame.init() # start pygame
+pygame.init()
 
 # sprite lists
 all_sprites_list = pygame.sprite.Group()
@@ -198,6 +203,16 @@ while running:
                 menu = True
                 restart_screen = False
 
+        # open/close options menu
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_o:
+                options_screen = True
+                menu = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_b:
+                menu = True
+                options_screen = False
+
         # player firing
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
@@ -224,20 +239,25 @@ while running:
                 game = True
 
     # --Menu-- # -------------------------------------------------------------------------------------------------------------------------------
-    if menu: # if menu is open
+    if menu == True:
         screen.fill(black)
 
-        button_width = 220
+        button_width = 240
         button_height = 50
         button_x = (display_width - button_width) // 2
         button_y = (display_height - button_height) // 2 + 200
 
         # start button
         start_button_rect = pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(button_x, button_y, button_width, button_height))
-        start_font = pygame.font.Font(None, 36)
-        start_text = start_font.render("Press N to start", True, (255, 255, 255))
+        start_text = button_font.render("Press N to start", True, (255, 255, 255))
         start_text_rect = start_text.get_rect(center=start_button_rect.center)
         screen.blit(start_text, start_text_rect)
+
+        # options button
+        option_button_rect = pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(button_x, button_y + 75, button_width, button_height))
+        option_text = button_font.render("Press O for options", True, (255, 255, 255))
+        option_text_rect = option_text.get_rect(center=option_button_rect.center)
+        screen.blit(option_text, option_text_rect)
 
         # leaderboard display
         leaderboard_title = big_font.render("Leaderboard rankings", True, white)
@@ -257,14 +277,34 @@ while running:
         records = read_records()
         start_y = 70
         for rank, record in enumerate(records, start=1):
-            rank_text = small_font.render(str(rank), True, white)
-            score_text = small_font.render(record[1], True, white)
-            name_text = small_font.render(record[0], True, white)
-            difficulty_text = small_font.render(record[2], True, white)
-            screen.blit(rank_text, (title_x, start_y + rank * 30))
-            screen.blit(score_text, (title_x + 150, start_y + rank * 30))
-            screen.blit(name_text, (title_x + 300, start_y + rank * 30))
-            screen.blit(difficulty_text, (title_x + 450, start_y + rank * 30))
+            if rank > 10:
+                pass
+            else:
+                rank_text = small_font.render(str(rank), True, white)
+                score_text = small_font.render(record[1], True, white)
+                name_text = small_font.render(record[0], True, white)
+                difficulty_text = small_font.render(record[2], True, white)
+                screen.blit(rank_text, (title_x, start_y + rank * 30))
+                screen.blit(score_text, (title_x + 150, start_y + rank * 30))
+                screen.blit(name_text, (title_x + 300, start_y + rank * 30))
+                screen.blit(difficulty_text, (title_x + 450, start_y + rank * 30))
+
+    # --Options screen-- # -------------------------------------------------------------------------------------------------------------------------------
+    elif options_screen == True:
+        screen.fill(black)
+
+        # button: return to menu
+        backText = small_font.render("Press B to go back to the menu", 300, white)
+        screen.blit(backText, (600, 550))
+
+        # button: help and controls information
+
+
+        # text box to change name
+
+
+        # slider to change diffuculty
+
 
     # --Restart screen-- # -------------------------------------------------------------------------------------------------------------------------------
     elif restart_screen == True:
@@ -289,18 +329,18 @@ while running:
             bullet_group.remove(e)
         for f in shoot_group:
             shoot_group.remove(f)
-        boss_group.remove(1)
+        for g in boss_group:
+            boss_group.remove(g)
+
+        added_boss = False
+        added_player = False
+        respawned = False
 
         # clear score
         temp_score = score
         score = 0
 
-        # respawing sprites to restart game
-        if respawned == False:
-            spawn()
-            respawned = True
-
-        # Update leaderboard
+        # update leaderboard
         nombre = "OLI"
         temp_difficulty = "Easy"
         while flag == False:
@@ -373,6 +413,11 @@ while running:
         bullet_group.update()
         shoot_group.update()
         boss_group.update()
+
+        # respawing sprites to restart game
+        if respawned == False:
+            spawn()
+            respawned = True
 
         # sprites draw
         enemy_group.draw(screen)
