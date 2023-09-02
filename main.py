@@ -1,6 +1,22 @@
 import pygame
 import random
-import sys
+
+"""Difficulty differences:
+Easy
+- Slowest shooting enemies
+- Gains max health when a boss is defeated
+- Safe spot avalable
+
+Medium
+- Fast shooting enemies
+- Gains one health when a boss is defeated
+- No safe spot avalable
+
+Hard
+- Very fast shooting enemies
+- Gains no health when a boss is defeated
+- No safe spot avalable
+"""
 
 # size of screen
 display_width = 1350
@@ -19,26 +35,37 @@ options_screen = False
 added_player = False
 game = False
 score = 0
+final_score = 0
 dead = False
 respawned = True
-phase2 = False
-boss_health = 20
+boss_health = 10
 buffer = False
+last_hit_time = 0
+buffer_time = 1000
+last_hit_time2 = 0
+buffer2 = False
+enemies_dead = 0
+
+# looping game variables
+current_phase = 0
 player_health = 3
+phase1 = False
+phase2 = False
 
 # options screen variables
 options = [
     "Return to Menu",
-    "Help and Controls",
+    "Infomation on Controls",
     "Change Acount:",
     "Difficulty:"
 ]
 controls = [
-    "Item 1",
-    "Item 2",
-    "Item 3",
-    "Item 4",
-    "Item 5"
+    "Move player up => w",
+    "Player shooting => Space Bar",
+    "Shut down game => Escape",
+    "Select option one => 1",
+    "Select option two => 2",
+    "Select option three => 3"
 ]
 
 selected_option = 0
@@ -48,12 +75,14 @@ MEDIUM = False
 HARD = False
 controls_screen = False
 accounts_screen = False
+ACC1 = False
+ACC2 = False
+ACC3 = True
 
 # fonts
 big_font = pygame.font.SysFont("display", 32)
 small_font = pygame.font.SysFont("Calibri", 25)
 font = pygame.font.Font(None, 36)
-
 
 # colours
 red = (255, 0,0)
@@ -62,6 +91,7 @@ blue = (0, 0, 255)
 black = (0, 0, 0)
 white = (255, 255, 255)
 yellow = (255, 255, 0)
+darkPurple = (48, 25, 52)
 darkBrown = (10, 10, 10)
 lighterBrown= (100, 70, 60)
 
@@ -72,11 +102,36 @@ class Enemy(pygame.sprite.Sprite):
         self.image = pygame.Surface([50, 50])
         self.image.fill(red)
         self.rect = self.image.get_rect()
-        self.rect.x = random.randint(800,1200)
-        self.rect.y = random.randint(0,800)
+        self.rect.x = random.randint(600, 1200)
+        if EASY or MEDIUM:
+            self.rect.y = random.randint(50, 800)
+        if HARD:
+            self.rect.y = random.randint(50, 840)
+        self.speed_x = random.choice([-2, 2])  # Random horizontal speed
+        self.speed_y = random.choice([-2, 2])  # Random vertical speed
 
     def update(self):
-        pass
+            # Move the enemy based on its speed
+            self.rect.x += self.speed_x
+            self.rect.y += self.speed_y
+
+            # Check boundaries to keep the enemy within the desired area
+            if self.rect.left < 600:
+                self.speed_x = abs(self.speed_x)  # Reverse horizontal direction
+            elif self.rect.right > 1200:
+                self.speed_x = -abs(self.speed_x)  # Reverse horizontal direction
+
+            if EASY or MEDIUM:
+                if self.rect.top < 50:
+                    self.speed_y = abs(self.speed_y)  # Reverse vertical direction
+                elif self.rect.bottom > 800:
+                    self.speed_y = -abs(self.speed_y)  # Reverse vertical direction
+
+            if HARD:
+                if self.rect.top < 50:
+                    self.speed_y = abs(self.speed_y)  # Reverse vertical direction
+                elif self.rect.bottom > 840:
+                    self.speed_y = -abs(self.speed_y)  # Reverse vertical direction
 
 class Boss(pygame.sprite.Sprite):
     def __init__(self):
@@ -90,12 +145,17 @@ class Boss(pygame.sprite.Sprite):
     def update(self):
         if self.down:
             self.rect.y -= 5
-            if self.rect.y <= 10:
+            if self.rect.y <= 50:
                 self.down = False
         else:
             self.rect.y += 5
-            if self.rect.y >= 840-100:
-                self.down = True
+            # remove safe spot on hard mode
+            if EASY:
+                if self.rect.y >= 840-100:
+                    self.down = True
+            elif MEDIUM or HARD:
+                if self.rect.y >= 840:
+                    self.down = True
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -105,7 +165,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
 
     def update(self):
-        if self.rect.y >= 800:
+        if self.rect.y >= 780:
             pass
         else:
             self.rect.y += 5
@@ -129,16 +189,6 @@ class Shoot(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.x -= 5
-
-class Platform(pygame.sprite.Sprite):
-    def __init__(self):
-        super().__init__()
-        self.image = pygame.Surface([400, 800])
-        self.image.fill(yellow)
-        self.rect = self.image.get_rect()
-
-    def update(self):
-        self.rect.x -= 2
 
 # --Functions-- # -------------------------------------------------------------------------------------------------------------------------------
 key_state = {
@@ -195,6 +245,17 @@ def update_leaderboard(name, score, difficulty):
     records.sort(key=lambda x: int(x[1]), reverse=True)
     write_records(records)
 
+def respawn_enemies():
+    for x in range(10):
+        enemy = Enemy()
+        enemy_group.add(enemy)
+
+def respawn_boss():
+    boss = Boss()
+    boss_group.add(boss)
+    boss.rect.x = 1000
+    boss.rect.y = 350
+
 # -----Sprites----- # -------------------------------------------------------------------------------------------------------------------------------
 
 pygame.init()
@@ -235,17 +296,18 @@ while running:
                 menu = True
                 restart_screen = False
 
-        # open/close options menu
+        # two back buttions on differnt screens
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_o:
+            if event.key == pygame.K_b and controls_screen:
+                controls_screen = False
                 options_screen = True
-                menu = False
-
-
+            if event.key == pygame.K_b and accounts_screen:
+                accounts_screen = False
+                options_screen = True
 
         # player firing
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
+            if event.key == pygame.K_SPACE and game:
                 bullet = Bullet()
 
                 # Set the bullet so it is where the player is
@@ -263,11 +325,13 @@ while running:
 
         # exit menu
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_n:
+            if event.key == pygame.K_SPACE and menu:
                 menu = False
                 restart_screen = False
                 game = True
+                phase1 = True
 
+        # difficulty change
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_1 and options_screen:
                 EASY = True
@@ -281,6 +345,21 @@ while running:
                 EASY = False
                 MEDIUM = False
                 HARD = True
+
+        # account change
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_1 and accounts_screen:
+                ACC1 = True
+                ACC2 = False
+                ACC3 = False
+            if event.key == pygame.K_2 and accounts_screen:
+                ACC1 = False
+                ACC2 = True
+                ACC3 = False
+            if event.key == pygame.K_3 and accounts_screen:
+                ACC1 = False
+                ACC2 = False
+                ACC3 = True
 
         # options menu interactivity
         if event.type == pygame.KEYDOWN:
@@ -305,20 +384,29 @@ while running:
 
         button_width = 240
         button_height = 50
-        button_x = (display_width - button_width) // 2
+        button_x = (display_width - button_width) // 2 -10
         button_y = (display_height - button_height) // 2 + 200
 
         # start button
-        start_button_rect = pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(button_x, button_y, button_width, button_height))
-        start_text = font.render("Press N to start", True, (255, 255, 255))
+        start_button_rect = pygame.draw.rect(screen, red, pygame.Rect(button_x, button_y, button_width + 10, button_height))
+        start_text = font.render("Press SPACE to start", True, white)
         start_text_rect = start_text.get_rect(center=start_button_rect.center)
         screen.blit(start_text, start_text_rect)
 
-        # options button
-        option_button_rect = pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(button_x, button_y + 75, button_width, button_height))
-        option_text = font.render("Press O for options", True, (255, 255, 255))
-        option_text_rect = option_text.get_rect(center=option_button_rect.center)
-        screen.blit(option_text, option_text_rect)
+        # options button (on click)
+        option_button_rect = pygame.draw.rect(screen, red, pygame.Rect(button_x, button_y + 75, button_width + 10, button_height))
+        pygame.draw.rect(screen, red, option_button_rect)
+        option_button_text = font.render("Options", True, white)
+        text_rect = option_button_text.get_rect(center=option_button_rect.center)
+        screen.blit(option_button_text, text_rect)
+
+        # Handle mouse events for the back button
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    if option_button_rect.collidepoint(event.pos):
+                        options_screen = True
+                        menu = False
 
         # leaderboard display
         leaderboard_title = big_font.render("Leaderboard rankings", True, white)
@@ -357,55 +445,45 @@ while running:
 
         if controls_screen:
             controls_title = big_font.render("Controls:", True, white)
-            screen.blit(controls_title, (550, 20))
+            screen.blit(controls_title, (display_width // 2 - 50, 20))
             y_offset = 70
             for item in controls:
                 text_surface = small_font.render(item, True, white)
                 text_rect = text_surface.get_rect()
-                text_rect.center = (display_width // 2 - 110, y_offset)
+                text_rect.center = (display_width // 2 , y_offset)
                 screen.blit(text_surface, text_rect)
                 y_offset += 35
 
-            # Back button
-            back_button_rect = pygame.Rect(100, display_height - 100, 200, 50)
-            pygame.draw.rect(screen, white, back_button_rect)
-            back_button_text = small_font.render("Go back", True, black)
-            text_rect = back_button_text.get_rect(center=back_button_rect.center)
-            screen.blit(back_button_text, text_rect)
-
-            # Handle mouse events for the back button
-            for event in pygame.event.get():
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:
-                        if back_button_rect.collidepoint(event.pos):
-                            controls_screen = False
+            # back button
+            start_text = font.render("< Back (b)", True, white)
+            screen.blit(start_text, start_text_rect)
 
         elif accounts_screen:
             accounts = big_font.render("Accounts:", True, white)
-            screen.blit(accounts, (540, 45))
+            screen.blit(accounts, (display_width // 2 - 100, 45))
 
             account_name1 = small_font.render("1: Oli", True, white)
-            screen.blit(account_name1, (450, 100))
+            screen.blit(account_name1, (500, 100))
 
             account_name2 = small_font.render("2: Ben", True, white)
-            screen.blit(account_name2, (550, 100))
+            screen.blit(account_name2, (600, 100))
 
             account_name3 = small_font.render("3: Guest", True, white)
-            screen.blit(account_name3, (650, 100))
+            screen.blit(account_name3, (700, 100))
 
-            # Back button v2
-            back_button2_rect = pygame.Rect(100, display_height - 100, 200, 50)
-            pygame.draw.rect(screen, white, back_button2_rect)
-            back_button2_text = small_font.render("Go back", True, black)
-            text2_rect = back_button2_text.get_rect(center=back_button2_rect.center)
-            screen.blit(back_button2_text, text2_rect)
+            if ACC1:
+                account_name1 = small_font.render("1: Oli", True, green)
+                screen.blit(account_name1, (500, 100))
+            elif ACC2:
+                account_name2 = small_font.render("2: Ben", True, green)
+                screen.blit(account_name2, (600, 100))
+            elif ACC3:
+                account_name3 = small_font.render("3: Guest", True, green)
+                screen.blit(account_name3, (700, 100))
 
-            # Handle mouse events for the back button
-            for event in pygame.event.get():
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:
-                        if back_button2_rect.collidepoint(event.pos):
-                            accounts_screen = False
+            # back button
+            start_text = font.render("< Back (b)", True, white)
+            screen.blit(start_text, start_text_rect)
 
         else:
             for i, option in enumerate(options):
@@ -440,6 +518,10 @@ while running:
     elif restart_screen == True:
         screen.fill(black)
 
+        # final score text
+        finalScoreTxt = small_font.render(f"Final Score: {final_score}", False, white)
+        screen.blit(finalScoreTxt, (10, 10))
+
         # death screen (with img in files)
         you_died_image = pygame.image.load("you_died.jpg")
         x = (display_width - you_died_image.get_width()) // 2
@@ -462,17 +544,34 @@ while running:
         for g in boss_group:
             boss_group.remove(g)
 
+        # reset flags
         added_boss = False
         added_player = False
         respawned = False
+        phase1 = True
+        phase2 = False
 
         # clear score
         temp_score = score
         score = 0
 
-        # update leaderboard
-        nombre = "OLI"
-        temp_difficulty = "Easy"
+        # update leaderboard (select what account and difficulty from options screen)
+        # account
+        if ACC1:
+            nombre = "Oli"
+        elif ACC2:
+            nombre = "Ben"
+        elif ACC3:
+            nombre = "Guest"
+
+        # difficulty
+        if EASY:
+            temp_difficulty = "Easy"
+        elif MEDIUM:
+            temp_difficulty = "Medium"
+        elif HARD:
+            temp_difficulty = "Hard"
+
         while flag == False:
             player_name = nombre
             player_score = temp_score
@@ -483,6 +582,54 @@ while running:
     # --Game screen-- # -------------------------------------------------------------------------------------------------------------------------------
     elif game == True:
 
+        if phase1:
+            # Update and draw enemy sprites for the enemies phase
+            enemy_group.update()
+            enemy_group.draw(screen)
+
+        elif phase2:
+            # Update and draw boss sprite for the boss phase
+            boss_group.update()
+            boss_group.draw(screen)
+
+        # Check if the player is still alive
+        if player_health <= 0:
+            restart_screen = True
+            game = False
+            dead = False
+            player_health = 3
+            for h in player_group:
+                player_group.remove(h)
+            # Skip the rest of the game logic
+            continue
+
+        if phase1 and enemies_dead >= 10:
+            phase1 = False
+            phase2 = True
+            enemies_dead = 0
+            if score > 10:
+                respawn_boss()
+
+        # When the boss dies on EASY and MEDIUM difficulties healing and switch phases (boss -> enemies)
+        if EASY:
+            if phase2 and boss.health <= 0:
+                boss.health = 10  # Reset the boss's health
+                player_health = min(player_health + 3, 3)  # Increase player's health to maximum, but not more than 3
+                phase1 = True
+                phase2 = False
+                boss_group.remove(boss)
+                all_sprites_list.remove(boss)
+                respawn_enemies()  # Respawn enemies for the next phase
+        if MEDIUM:
+            if phase2 and boss.health <= 0:
+                boss.health = 10  # Reset the boss's health
+                player_health = min(player_health + 1, 3)  # Increase player's health, but not more than 3
+                phase1 = True
+                phase2 = False
+                boss_group.remove(boss)
+                all_sprites_list.remove(boss)
+                respawn_enemies()  # Respawn enemies for the next phase
+
         # backround design
         screen.fill(black)
 
@@ -490,8 +637,24 @@ while running:
         scoreTxt = small_font.render(f"Score: {score}", False, white)
         screen.blit(scoreTxt, (10, 10))
 
+        # update score for researt screen (final score)
+        final_score = score
+
+        # health bar border
+        pygame.draw.rect(screen, yellow, (250, 10, 155, 30), width=3)
+        # three seperate blocks for each health, linked to player_health
+        if player_health == 3:
+            pygame.draw.rect(screen, blue, (255, 15, 45, 20)) #1
+            pygame.draw.rect(screen, blue, (305, 15, 45, 20)) #2
+            pygame.draw.rect(screen, blue, (355, 15, 45, 20)) #3
+        elif player_health == 2:
+            pygame.draw.rect(screen, blue, (255, 15, 45, 20)) #1
+            pygame.draw.rect(screen, blue, (305, 15, 45, 20)) #2
+        elif player_health == 1:
+            pygame.draw.rect(screen, blue, (255, 15, 45, 20)) #1
+
         # hold to rise up screen
-        if key_held(pygame.K_w) and player.rect.y > 0:
+        if key_held(pygame.K_w) and player.rect.y > 50:
             player.rect.y -= 10
 
         # boss shooting
@@ -505,16 +668,38 @@ while running:
                     shoot_group.add(bossShoot)
 
         # enemies shooting
-        for enemy in enemy_group:
-            chance = random.randint(0, 10000)
-            if (chance % 333) == 0:
-                shoot = Shoot()
-                shoot.rect.x = enemy.rect.x
-                shoot.rect.y = enemy.rect.y
-                shoot_group.add(shoot)
+        # EASY
+        if EASY:
+            for enemy in enemy_group:
+                chance = random.randint(0, 10000)
+                if (chance % 333) == 0:
+                    shoot = Shoot()
+                    shoot.rect.x = enemy.rect.x
+                    shoot.rect.y = enemy.rect.y
+                    shoot_group.add(shoot)
+
+        # MEDIUM
+        if MEDIUM:
+            for enemy in enemy_group:
+                chance = random.randint(0, 10000)
+                if (chance % 100) == 0:
+                    shoot = Shoot()
+                    shoot.rect.x = enemy.rect.x
+                    shoot.rect.y = enemy.rect.y
+                    shoot_group.add(shoot)
+
+        # HARD
+        if HARD:
+            for enemy in enemy_group:
+                chance = random.randint(0, 10000)
+                if (chance % 50) == 0:
+                    shoot = Shoot()
+                    shoot.rect.x = enemy.rect.x
+                    shoot.rect.y = enemy.rect.y
+                    shoot_group.add(shoot)
 
         # calculate mechanics for each bullet
-        if score < 10:
+        if phase1:
             for bullet in bullet_group:
 
                 # See if it hit a block
@@ -525,41 +710,62 @@ while running:
                     bullet_group.remove(bullet)
                     all_sprites_list.remove(bullet)
                     score += 1
+                    enemies_dead += 1
 
                 # Remove the bullet if it flies up off the screen
                 if bullet.rect.x < -10 or bullet.rect.x > 1400:
                     bullet_group.remove(bullet)
                     all_sprites_list.remove(bullet)
 
-        # boss bullets and health
-        if score >= 10 and buffer == False:
-            for bullet in bullet_group:
-                if bullet.rect.colliderect(boss.rect):
-                    boss.health -= 1
-                    score += 1
-                    buffer = True
+        # boss getting hit and health (buffer is the time until the boss can be hit again)
+        if phase2 and buffer == False:
+            current_time = pygame.time.get_ticks()
+            if current_time - last_hit_time >= buffer_time:
+                for bullet in bullet_group:
+                    if bullet.rect.colliderect(boss.rect):
+                        boss.health -= 1
+                        score += 1
+                        buffer = True
+                        last_hit_time = current_time
 
-        if boss.health <= 0:
-            boss_group.remove(boss)
-            all_sprites_list.remove(boss)
-            phase2 = False
+        # reset buffer
+        current_time = pygame.time.get_ticks()
+        if current_time - last_hit_time >= buffer_time:
+            buffer = False
 
-        # calculate mechanics for player being hit by the enemy
-        for shoot in shoot_group:
-            health_hit_list = pygame.sprite.spritecollide(shoot, player_group, True)
-            for player in health_hit_list:
-                shoot_group.remove(shoot)
-                all_sprites_list.remove(shoot)
-                dead = True
-            if shoot.rect.x < -10 or shoot.rect.x > 1400:
-                shoot_group.remove(shoot)
-                all_sprites_list.remove(shoot)
+
+        # calculate mechanics for player being hit by the enemy (player health and being hit)
+        if buffer2 == False:
+            for shoot in shoot_group:
+                current_time = pygame.time.get_ticks()
+                if current_time - last_hit_time2 >= buffer_time:
+                    health_hit_list = pygame.sprite.spritecollide(shoot, player_group, False)
+                    for player in health_hit_list:
+                        shoot_group.remove(shoot)
+                        all_sprites_list.remove(shoot)
+                        player_health -= 1
+                        buffer2 = True
+                    if shoot.rect.x < -10 or shoot.rect.x > 1400:
+                        shoot_group.remove(shoot)
+                        all_sprites_list.remove(shoot)
+
+        # reset buffer2
+        current_time = pygame.time.get_ticks()
+        if current_time - last_hit_time2 >= buffer_time:
+            buffer2 = False
+
+        # player dies
+        if player_health <= 0:
+            dead = True
 
         # condition in game end
         if dead:
             restart_screen = True
             game = False
             dead = False
+            player_health = 3
+            for h in player_group:
+                player_group.remove(h)
 
         # sprites update
         enemy_group.update()
@@ -573,13 +779,20 @@ while running:
             spawn()
             respawned = True
 
-        # sprites draw
-        enemy_group.draw(screen)
-        player_group.draw(screen)
+        # draw sprite depending on each phase
         bullet_group.draw(screen)
         shoot_group.draw(screen)
-        if score == 10:
-            phase2 = True
+
+        # Draw the player as long as health is greater than zero
+        if player_health > 0:
+            player_group.draw(screen)
+
+        # Draw enemies when in the enemies phase
+        if phase1:
+            enemy_group.draw(screen)
+
+        # Draw the boss when in the boss phase
+        if phase2:
             boss_group.draw(screen)
 
         # flag for leaderboard score
