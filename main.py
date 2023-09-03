@@ -93,7 +93,7 @@ white = (255, 255, 255)
 yellow = (255, 255, 0)
 darkPurple = (48, 25, 52)
 darkBrown = (10, 10, 10)
-lighterBrown= (100, 70, 60)
+lighterBrown = (100, 70, 60)
 
 # ---Classes--- # -------------------------------------------------------------------------------------------------------------------------------
 class Enemy(pygame.sprite.Sprite):
@@ -256,6 +256,15 @@ def respawn_boss():
     boss.rect.x = 1000
     boss.rect.y = 350
 
+# Draw backround decoration
+def backround_decoration(screen):
+    # Background rectangles
+    pygame.draw.rect(screen, darkPurple, (0, 0, display_width, display_height))
+
+    # Borders
+    pygame.draw.rect(screen, darkBrown, (10, 10, display_width - 20, display_height - 20), 10)
+    pygame.draw.rect(screen, lighterBrown, (20, 20, display_width - 40, display_height - 40), 5)
+
 # -----Sprites----- # -------------------------------------------------------------------------------------------------------------------------------
 
 pygame.init()
@@ -380,7 +389,10 @@ while running:
 
     # --Menu-- # -------------------------------------------------------------------------------------------------------------------------------
     if menu == True:
+
         screen.fill(black)
+        # Call the backroud decoration
+        backround_decoration(screen)
 
         button_width = 240
         button_height = 50
@@ -410,10 +422,10 @@ while running:
 
         # leaderboard display
         leaderboard_title = big_font.render("Leaderboard rankings", True, white)
-        screen.blit(leaderboard_title, (550, 20))
+        screen.blit(leaderboard_title, (550, 150))
 
         title_x = 400
-        title_y = 70
+        title_y = 200
         rankTitle = small_font.render("Rank", 300, white)
         scoreTitle = small_font.render("Score", 300, white)
         nameTitle = small_font.render("Account", 300, white)
@@ -424,7 +436,7 @@ while running:
         screen.blit(diffTitle, (title_x + 450, title_y))
 
         records = read_records()
-        start_y = 70
+        start_y = 200
         for rank, record in enumerate(records, start=1):
             if rank > 10:
                 pass
@@ -442,10 +454,15 @@ while running:
     elif options_screen == True:
 
         screen.fill(black)
+        # Call the backroud decoration
+        backround_decoration(screen)
 
         if controls_screen:
+            # Call the backroud decoration
+            backround_decoration(screen)
+
             controls_title = big_font.render("Controls:", True, white)
-            screen.blit(controls_title, (display_width // 2 - 50, 20))
+            screen.blit(controls_title, (display_width // 2 - 50, 30))
             y_offset = 70
             for item in controls:
                 text_surface = small_font.render(item, True, white)
@@ -459,6 +476,10 @@ while running:
             screen.blit(start_text, start_text_rect)
 
         elif accounts_screen:
+
+            # Call the backrou decoration
+            backround_decoration(screen)
+
             accounts = big_font.render("Accounts:", True, white)
             screen.blit(accounts, (display_width // 2 - 100, 45))
 
@@ -516,6 +537,7 @@ while running:
 
     # --Restart screen-- # -------------------------------------------------------------------------------------------------------------------------------
     elif restart_screen == True:
+
         screen.fill(black)
 
         # final score text
@@ -629,6 +651,14 @@ while running:
                 boss_group.remove(boss)
                 all_sprites_list.remove(boss)
                 respawn_enemies()  # Respawn enemies for the next phase
+        if HARD:
+            if phase2 and boss.health <= 0:
+                boss.health = 10  # Reset the boss's health
+                phase1 = True
+                phase2 = False
+                boss_group.remove(boss)
+                all_sprites_list.remove(boss)
+                respawn_enemies()  # Respawn enemies for the next phase
 
         # backround design
         screen.fill(black)
@@ -659,13 +689,22 @@ while running:
 
         # boss shooting
         if phase2:
-            for boss in boss_group:
-                chance = random.randint(0, 10000)
-                if (chance % 10) == 0:
-                    bossShoot = Shoot()
-                    bossShoot.rect.x = boss.rect.x
-                    bossShoot.rect.y = boss.rect.y
-                    shoot_group.add(bossShoot)
+            if EASY or MEDIUM:
+                for boss in boss_group:
+                    chance = random.randint(0, 10000)
+                    if (chance % 10) == 0:
+                        bossShoot = Shoot()
+                        bossShoot.rect.x = boss.rect.x
+                        bossShoot.rect.y = boss.rect.y
+                        shoot_group.add(bossShoot)
+            if HARD:
+                for boss in boss_group:
+                    chance = random.randint(0, 10000)
+                    if (chance % 8) == 0:
+                        bossShoot = Shoot()
+                        bossShoot.rect.x = boss.rect.x
+                        bossShoot.rect.y = boss.rect.y
+                        shoot_group.add(bossShoot)
 
         # enemies shooting
         # EASY
