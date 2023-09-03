@@ -28,23 +28,30 @@ pygame.init()
 screen = pygame.display.set_mode((display_width,display_height))
 pygame.display.set_caption('Arcade game')
 
-# declaring miscellaneous variables
+# --- Varialbes --- #
+
+# screens (screen flags)
 menu = True
 restart_screen = False
 options_screen = False
-added_player = False
 game = False
+
+# game variables
 score = 0
 final_score = 0
-dead = False
-respawned = True
-boss_health = 10
-buffer = False
+enemies_dead = 0
 last_hit_time = 0
 buffer_time = 1000
 last_hit_time2 = 0
+boss_health = 10
+
+# other flags
+added_player = False
+dead = False
+respawned = True
+buffer = False
 buffer2 = False
-enemies_dead = 0
+
 
 # looping game variables
 current_phase = 0
@@ -53,6 +60,17 @@ phase1 = False
 phase2 = False
 
 # options screen variables
+selected_option = 0
+difficulty = 0.3
+EASY = True
+MEDIUM = False
+HARD = False
+controls_screen = False
+accounts_screen = False
+ACC1 = False
+ACC2 = False
+ACC3 = True
+
 options = [
     "Return to Menu",
     "Infomation on Controls",
@@ -68,23 +86,12 @@ controls = [
     "Select option three => 3"
 ]
 
-selected_option = 0
-difficulty = 0.3
-EASY = True
-MEDIUM = False
-HARD = False
-controls_screen = False
-accounts_screen = False
-ACC1 = False
-ACC2 = False
-ACC3 = True
-
 # fonts
 big_font = pygame.font.SysFont("display", 32)
 small_font = pygame.font.SysFont("Calibri", 25)
 font = pygame.font.Font(None, 36)
 
-# colours
+# colour pallete
 red = (255, 0,0)
 green = (0, 255,0)
 blue = (0, 0, 255)
@@ -256,12 +263,9 @@ def respawn_boss():
     boss.rect.x = 1000
     boss.rect.y = 350
 
-# Draw backround decoration
 def backround_decoration(screen):
-    # Background rectangles
     pygame.draw.rect(screen, darkPurple, (0, 0, display_width, display_height))
 
-    # Borders
     pygame.draw.rect(screen, darkBrown, (10, 10, display_width - 20, display_height - 20), 10)
     pygame.draw.rect(screen, lighterBrown, (20, 20, display_width - 40, display_height - 40), 5)
 
@@ -332,7 +336,7 @@ while running:
         elif event.type == pygame.KEYUP:
             key_state[event.key] = False
 
-        # exit menu
+        # exit menu and start game
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE and menu:
                 menu = False
@@ -384,16 +388,14 @@ while running:
                     controls_screen = True
                 elif selected_option == 2:
                     accounts_screen = True
-                elif selected_option == 3:
-                    print("difficult")
 
     # --Menu-- # -------------------------------------------------------------------------------------------------------------------------------
     if menu == True:
 
         screen.fill(black)
-        # Call the backroud decoration
         backround_decoration(screen)
 
+        # button variables
         button_width = 240
         button_height = 50
         button_x = (display_width - button_width) // 2 -10
@@ -454,11 +456,10 @@ while running:
     elif options_screen == True:
 
         screen.fill(black)
-        # Call the backroud decoration
         backround_decoration(screen)
 
         if controls_screen:
-            # Call the backroud decoration
+
             backround_decoration(screen)
 
             controls_title = big_font.render("Controls:", True, white)
@@ -471,7 +472,7 @@ while running:
                 screen.blit(text_surface, text_rect)
                 y_offset += 35
 
-            # back button
+            # back button text
             start_text = font.render("< Back (b)", True, white)
             screen.blit(start_text, start_text_rect)
 
@@ -502,7 +503,7 @@ while running:
                 account_name3 = small_font.render("3: Guest", True, green)
                 screen.blit(account_name3, (700, 100))
 
-            # back button
+            # back button text
             start_text = font.render("< Back (b)", True, white)
             screen.blit(start_text, start_text_rect)
 
@@ -594,6 +595,7 @@ while running:
         elif HARD:
             temp_difficulty = "Hard"
 
+        # so only one record is added
         while flag == False:
             player_name = nombre
             player_score = temp_score
@@ -625,6 +627,7 @@ while running:
             # Skip the rest of the game logic
             continue
 
+        # respawn boss only when enemies die
         if phase1 and enemies_dead >= 10:
             phase1 = False
             phase2 = True
@@ -818,7 +821,7 @@ while running:
             spawn()
             respawned = True
 
-        # draw sprite depending on each phase
+        # draw sprites
         bullet_group.draw(screen)
         shoot_group.draw(screen)
 
