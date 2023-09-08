@@ -1,5 +1,7 @@
 import pygame
 import random
+import pygame.image
+import pygame.transform
 
 """Difficulty differences:
 Easy
@@ -26,7 +28,7 @@ display_height = 850
 clock = pygame.time.Clock()
 pygame.init()
 screen = pygame.display.set_mode((display_width,display_height))
-pygame.display.set_caption('Arcade game')
+pygame.display.set_caption('Alien Barrage')
 
 # --- Varialbes --- #
 
@@ -44,6 +46,7 @@ last_hit_time = 0
 buffer_time = 1000
 last_hit_time2 = 0
 boss_health = 10
+player_health = 3
 
 # other flags
 added_player = False
@@ -55,7 +58,6 @@ buffer2 = False
 
 # looping game variables
 current_phase = 0
-player_health = 3
 phase1 = False
 phase2 = False
 
@@ -97,19 +99,28 @@ green = (0, 255,0)
 blue = (0, 0, 255)
 black = (0, 0, 0)
 white = (255, 255, 255)
+darkerWhite = (230, 200, 160)
+titleColour = (150, 150, 250)
 yellow = (255, 255, 0)
 darkPurple = (48, 25, 52)
 darkBrown = (10, 10, 10)
 lighterBrown = (100, 70, 60)
 
+# images variables
+game_title_icon = pygame.image.load("gameTitle_icon.png").convert_alpha()
+game_title_icon = pygame.transform.scale(game_title_icon, (600, 250))
+
 # ---Classes--- # -------------------------------------------------------------------------------------------------------------------------------
 class Enemy(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface([50, 50])
-        self.image.fill(red)
+        enemy_icon = pygame.image.load("enemies_icon.png").convert_alpha()
+
+        # Resize the image to match the size of the enemy's surface
+        self.image = pygame.transform.scale(enemy_icon, (50, 50))
         self.rect = self.image.get_rect()
         self.rect.x = random.randint(600, 1200)
+
         if EASY or MEDIUM:
             self.rect.y = random.randint(50, 800)
         if HARD:
@@ -143,8 +154,11 @@ class Enemy(pygame.sprite.Sprite):
 class Boss(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface([100, 100])
-        self.image.fill(red)
+        # Load the "boss_icon" image
+        boss_icon = pygame.image.load("boss_icon.png").convert_alpha()
+
+        # Resize the image to match the size of the boss's surface
+        self.image = pygame.transform.scale(boss_icon, (100, 100))
         self.rect = self.image.get_rect()
         self.down = True
         self.health = 10
@@ -167,8 +181,15 @@ class Boss(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface([25,50])
-        self.image.fill(blue)
+        # Load the player's icon image
+        original_image = pygame.image.load("player_icon.png").convert_alpha()
+
+        # Define the desired width and height for the player's image
+        desired_width = 96
+        desired_height = 32
+
+        # Resize the image to the desired dimensions
+        self.image = pygame.transform.scale(original_image, (desired_width, desired_height))
         self.rect = self.image.get_rect()
 
     def update(self):
@@ -187,6 +208,16 @@ class Bullet(pygame.sprite.Sprite):
     def update(self):
         self.rect.x += 10
 
+class Big_bullet(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface([25, 25])
+        self.image.fill(white)
+        self.rect = self.image.get_rect()
+
+    def update(self):
+        self.rect.x += 3
+
 class Shoot(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
@@ -196,6 +227,18 @@ class Shoot(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.x -= 5
+
+class Health_Animation(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        health_icon = pygame.image.load("healthplus_animation.png").convert_alpha()
+
+        # Resize the image to match the size of the boss's surface
+        self.image = pygame.transform.scale(health_icon, (30, 30))
+        self.rect = self.image.get_rect()
+
+    def update(self):
+        self.rect.y -= 3
 
 # --Functions-- # -------------------------------------------------------------------------------------------------------------------------------
 key_state = {
@@ -264,7 +307,7 @@ def respawn_boss():
     boss.rect.y = 350
 
 def backround_decoration(screen):
-    pygame.draw.rect(screen, darkPurple, (0, 0, display_width, display_height))
+    pygame.draw.rect(screen, black, (0, 0, display_width, display_height))
 
     pygame.draw.rect(screen, darkBrown, (10, 10, display_width - 20, display_height - 20), 10)
     pygame.draw.rect(screen, lighterBrown, (20, 20, display_width - 40, display_height - 40), 5)
@@ -281,6 +324,7 @@ player_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
 shoot_group = pygame.sprite.Group()
 boss_group = pygame.sprite.Group()
+health_animation_group = pygame.sprite.Group()
 
 spawn()
 
@@ -395,11 +439,14 @@ while running:
         screen.fill(black)
         backround_decoration(screen)
 
+        # game title
+        screen.blit(game_title_icon, (380, 40))
+
         # button variables
         button_width = 240
         button_height = 50
         button_x = (display_width - button_width) // 2 -10
-        button_y = (display_height - button_height) // 2 + 200
+        button_y = (display_height - button_height) // 2 + 280
 
         # start button
         start_button_rect = pygame.draw.rect(screen, red, pygame.Rect(button_x, button_y, button_width + 10, button_height))
@@ -423,22 +470,22 @@ while running:
                         menu = False
 
         # leaderboard display
-        leaderboard_title = big_font.render("Leaderboard rankings", True, white)
-        screen.blit(leaderboard_title, (550, 150))
+        leaderboard_title = big_font.render("Leaderboard rankings", True, titleColour)
+        screen.blit(leaderboard_title, (550, 300))
 
         title_x = 400
-        title_y = 200
-        rankTitle = small_font.render("Rank", 300, white)
-        scoreTitle = small_font.render("Score", 300, white)
-        nameTitle = small_font.render("Account", 300, white)
-        diffTitle = small_font.render("Difficulty", 300, white)
+        title_y = 330
+        rankTitle = small_font.render("Rank", 300, darkerWhite)
+        scoreTitle = small_font.render("Score", 300, darkerWhite)
+        nameTitle = small_font.render("Account", 300, darkerWhite)
+        diffTitle = small_font.render("Difficulty", 300, darkerWhite)
         screen.blit(rankTitle, (title_x,title_y))
         screen.blit(scoreTitle, (title_x + 150, title_y))
         screen.blit(nameTitle, (title_x + 300, title_y))
         screen.blit(diffTitle, (title_x + 450, title_y))
 
         records = read_records()
-        start_y = 200
+        start_y = 330
         for rank, record in enumerate(records, start=1):
             if rank > 10:
                 pass
@@ -640,6 +687,17 @@ while running:
             if phase2 and boss.health <= 0:
                 boss.health = 10  # Reset the boss's health
                 player_health = min(player_health + 3, 3)  # Increase player's health to maximum, but not more than 3
+                # Create Health_Animation sprites
+                for hpE1 in range(1):
+                    health_animation = Health_Animation()
+                    health_animation.rect.x = 200
+                    health_animation.rect.y = 150
+                    health_animation_group.add(health_animation)
+                for hpE2 in range(1):
+                    health_animation = Health_Animation()
+                    health_animation.rect.x = 450
+                    health_animation.rect.y = 150
+                    health_animation_group.add(health_animation)
                 phase1 = True
                 phase2 = False
                 boss_group.remove(boss)
@@ -649,6 +707,17 @@ while running:
             if phase2 and boss.health <= 0:
                 boss.health = 10  # Reset the boss's health
                 player_health = min(player_health + 1, 3)  # Increase player's health, but not more than 3
+                # Create Health_Animation sprites
+                for hpM1 in range(1):
+                    health_animation = Health_Animation()
+                    health_animation.rect.x = 200
+                    health_animation.rect.y = 150
+                    health_animation_group.add(health_animation)
+                for hpM2 in range(1):
+                    health_animation = Health_Animation()
+                    health_animation.rect.x = 450
+                    health_animation.rect.y = 150
+                    health_animation_group.add(health_animation)
                 phase1 = True
                 phase2 = False
                 boss_group.remove(boss)
@@ -815,6 +884,7 @@ while running:
         bullet_group.update()
         shoot_group.update()
         boss_group.update()
+        health_animation_group.update()
 
         # respawing sprites to restart game
         if respawned == False:
@@ -824,6 +894,7 @@ while running:
         # draw sprites
         bullet_group.draw(screen)
         shoot_group.draw(screen)
+        health_animation_group.draw(screen)
 
         # Draw the player as long as health is greater than zero
         if player_health > 0:
