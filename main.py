@@ -47,6 +47,8 @@ buffer_time = 1000
 last_hit_time2 = 0
 boss_health = 10
 player_health = 3
+weapon_selection = False
+selected_weapon = None
 
 # other flags
 added_player = False
@@ -109,6 +111,15 @@ lighterBrown = (100, 70, 60)
 # images variables
 game_title_icon = pygame.image.load("gameTitle_icon.png").convert_alpha()
 game_title_icon = pygame.transform.scale(game_title_icon, (600, 250))
+
+green_button = pygame.image.load("greenWeaponBanner_icon.png")
+green_button = pygame.transform.scale(green_button, (300, 600))
+
+yellow_button = pygame.image.load("yellowWeaponBanner_icon.png")
+yellow_button = pygame.transform.scale(yellow_button, (300, 600))
+
+red_button = pygame.image.load("redWeaponBanner_icon.png")
+red_button = pygame.transform.scale(red_button, (300, 600))
 
 # ---Classes--- # -------------------------------------------------------------------------------------------------------------------------------
 class Enemy(pygame.sprite.Sprite):
@@ -433,6 +444,104 @@ while running:
                 elif selected_option == 2:
                     accounts_screen = True
 
+        # Player clicks on one of the weapon buttons
+        if weapon_selection:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+
+                if 100 <= mouse_x <= 400 and 100 <= mouse_y <= 700:
+                    selected_weapon = "green"
+                    weapon_selection = False
+                    game = True
+                    if EASY:
+                        # Create Health_Animation sprites
+                        for hpE1 in range(1):
+                            health_animation = Health_Animation()
+                            health_animation.rect.x = 200
+                            health_animation.rect.y = 150
+                            health_animation_group.add(health_animation)
+                        for hpE2 in range(1):
+                            health_animation = Health_Animation()
+                            health_animation.rect.x = 450
+                            health_animation.rect.y = 150
+                            health_animation_group.add(health_animation)
+                            respawn_enemies()
+                    if MEDIUM:
+                        # Create Health_Animation sprites
+                        for hpM1 in range(1):
+                            health_animation = Health_Animation()
+                            health_animation.rect.x = 200
+                            health_animation.rect.y = 150
+                            health_animation_group.add(health_animation)
+                        for hpM2 in range(1):
+                            health_animation = Health_Animation()
+                            health_animation.rect.x = 450
+                            health_animation.rect.y = 150
+                            health_animation_group.add(health_animation)
+
+                if 485 <= mouse_x <= 785 and 100 <= mouse_y <= 700:
+                    selected_weapon = "yellow"
+                    weapon_selection = False
+                    game = True
+                    if EASY:
+                        # Create Health_Animation sprites
+                        for hpE1 in range(1):
+                            health_animation = Health_Animation()
+                            health_animation.rect.x = 200
+                            health_animation.rect.y = 150
+                            health_animation_group.add(health_animation)
+                        for hpE2 in range(1):
+                            health_animation = Health_Animation()
+                            health_animation.rect.x = 450
+                            health_animation.rect.y = 150
+                            health_animation_group.add(health_animation)
+                            respawn_enemies()
+                    if MEDIUM:
+                        # Create Health_Animation sprites
+                        for hpM1 in range(1):
+                            health_animation = Health_Animation()
+                            health_animation.rect.x = 200
+                            health_animation.rect.y = 150
+                            health_animation_group.add(health_animation)
+                        for hpM2 in range(1):
+                            health_animation = Health_Animation()
+                            health_animation.rect.x = 450
+                            health_animation.rect.y = 150
+                            health_animation_group.add(health_animation)
+                    respawn_enemies()
+
+                if 870 <= mouse_x <= 1170 and 100 <= mouse_y <= 700:
+                    selected_weapon = "red"
+                    weapon_selection = False
+                    game = True
+                    if EASY:
+                        # Create Health_Animation sprites
+                        for hpE1 in range(1):
+                            health_animation = Health_Animation()
+                            health_animation.rect.x = 200
+                            health_animation.rect.y = 150
+                            health_animation_group.add(health_animation)
+                        for hpE2 in range(1):
+                            health_animation = Health_Animation()
+                            health_animation.rect.x = 450
+                            health_animation.rect.y = 150
+                            health_animation_group.add(health_animation)
+                            respawn_enemies()
+                    if MEDIUM:
+                        # Create Health_Animation sprites
+                        for hpM1 in range(1):
+                            health_animation = Health_Animation()
+                            health_animation.rect.x = 200
+                            health_animation.rect.y = 150
+                            health_animation_group.add(health_animation)
+                        for hpM2 in range(1):
+                            health_animation = Health_Animation()
+                            health_animation.rect.x = 450
+                            health_animation.rect.y = 150
+                            health_animation_group.add(health_animation)
+                    respawn_enemies()
+
+
     # --Menu-- # -------------------------------------------------------------------------------------------------------------------------------
     if menu == True:
 
@@ -687,42 +796,22 @@ while running:
             if phase2 and boss.health <= 0:
                 boss.health = 10  # Reset the boss's health
                 player_health = min(player_health + 3, 3)  # Increase player's health to maximum, but not more than 3
-                # Create Health_Animation sprites
-                for hpE1 in range(1):
-                    health_animation = Health_Animation()
-                    health_animation.rect.x = 200
-                    health_animation.rect.y = 150
-                    health_animation_group.add(health_animation)
-                for hpE2 in range(1):
-                    health_animation = Health_Animation()
-                    health_animation.rect.x = 450
-                    health_animation.rect.y = 150
-                    health_animation_group.add(health_animation)
                 phase1 = True
                 phase2 = False
                 boss_group.remove(boss)
                 all_sprites_list.remove(boss)
-                respawn_enemies()  # Respawn enemies for the next phase
+                weapon_selection = True # select weapon
+                #respawn_enemies()  # Respawn enemies for the next phase
         if MEDIUM:
             if phase2 and boss.health <= 0:
                 boss.health = 10  # Reset the boss's health
                 player_health = min(player_health + 1, 3)  # Increase player's health, but not more than 3
-                # Create Health_Animation sprites
-                for hpM1 in range(1):
-                    health_animation = Health_Animation()
-                    health_animation.rect.x = 200
-                    health_animation.rect.y = 150
-                    health_animation_group.add(health_animation)
-                for hpM2 in range(1):
-                    health_animation = Health_Animation()
-                    health_animation.rect.x = 450
-                    health_animation.rect.y = 150
-                    health_animation_group.add(health_animation)
                 phase1 = True
                 phase2 = False
                 boss_group.remove(boss)
                 all_sprites_list.remove(boss)
-                respawn_enemies()  # Respawn enemies for the next phase
+                weapon_selection = True # select weapon
+                #respawn_enemies()  # Respawn enemies for the next phase
         if HARD:
             if phase2 and boss.health <= 0:
                 boss.health = 10  # Reset the boss's health
@@ -730,7 +819,8 @@ while running:
                 phase2 = False
                 boss_group.remove(boss)
                 all_sprites_list.remove(boss)
-                respawn_enemies()  # Respawn enemies for the next phase
+                weapon_selection = True # select weapon
+                #respawn_enemies()  # Respawn enemies for the next phase
 
         # backround design
         screen.fill(black)
@@ -877,6 +967,26 @@ while running:
             player_health = 3
             for h in player_group:
                 player_group.remove(h)
+
+        # choosing weapons
+        if weapon_selection:
+            # remove others sprites from screen
+            game = False
+            for e in bullet_group:
+                bullet_group.remove(e)
+            for f in shoot_group:
+                shoot_group.remove(f)
+            for g in health_animation_group:
+                health_animation_group.remove(g)
+
+            # draw on new screen
+            player.rect. y = 800
+            screen.fill(black)
+
+            screen.blit(green_button, (100, 100))
+            screen.blit(yellow_button, (485, 100))
+            screen.blit(red_button, (870, 100))
+
 
         # sprites update
         enemy_group.update()
