@@ -47,9 +47,20 @@ buffer_time = 1000
 last_hit_time2 = 0
 boss_health = 10
 player_health = 3
+
+# red flash
+show_red_flash = False
+red_flash_duration = 1000
+red_flash_start_time = 0
+
+# weapons variables
 weapon_selection = False
-selected_weapon = "blue"
-weapon_options = ["blue", "green", "yellow", "red"]
+WBlue = True
+WGreen = False
+WYellow = False
+WRed = False
+bullet_timer = 0
+last_shot_time = 0
 
 # other flags
 added_player = False
@@ -57,6 +68,7 @@ dead = False
 respawned = True
 buffer = False
 buffer2 = False
+
 
 # looping game variables
 current_phase = 0
@@ -75,7 +87,6 @@ ACC1 = False
 ACC2 = False
 ACC3 = True
 
-# dictionaries
 options = [
     "Return to Menu",
     "Infomation on Controls",
@@ -84,23 +95,17 @@ options = [
 ]
 controls = [
     "Move player up => w",
-    "Player shooting => Space Bar",
     "Shut down game => Escape",
     "Select option one => 1",
     "Select option two => 2",
     "Select option three => 3"
 ]
-weapon_icons = {
-    "blue": "player_icon.png",
-    "green": "player_icon_green.png",
-    "yellow": "player_icon_yellow.png",
-    "red": "player_icon_red.png",
-}
 
 # fonts
 big_font = pygame.font.SysFont("display", 32)
 small_font = pygame.font.SysFont("Calibri", 25)
 font = pygame.font.Font(None, 36)
+warning_font = pygame.font.Font(None, 50)
 
 # colour pallete
 red = (255, 0,0)
@@ -118,6 +123,14 @@ lighterBrown = (100, 70, 60)
 # images variables
 game_title_icon = pygame.image.load("gameTitle_icon.png").convert_alpha()
 game_title_icon = pygame.transform.scale(game_title_icon, (600, 250))
+
+pirate = pygame.image.load("pirate.png").convert_alpha()
+pirate = pygame.transform.scale(pirate, (200, 300))
+
+alien = pygame.image.load("alien.png").convert_alpha()
+alien = pygame.transform.scale(alien, (250, 250))
+
+# for deco: pygame.draw.polygon(screen, color, (point-x, point-y, point-z))
 
 green_button = pygame.image.load("greenWeaponBanner_icon.png")
 green_button = pygame.transform.scale(green_button, (300, 600))
@@ -199,25 +212,19 @@ class Boss(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
+        # Load the player's icon image
+        original_image = pygame.image.load("player_icon.png").convert_alpha()
+        green_image = pygame.image.load("player_icon_green.png").convert_alpha()
+        yellow_image = pygame.image.load("player_icon_yellow.png").convert_alpha()
+        red_image = pygame.image.load("player_icon_red.png").convert_alpha()
 
-        # Load the player's icon image based on the selected_weapon
-        self.load_weapon_icon()
-
-    def load_weapon_icon(self):
+        # Define the desired width and height for the player's image
         desired_width = 96
         desired_height = 32
 
-        if self.selected_weapon in weapon_icons:
-            image_filename = weapon_icons[self.selected_weapon]
-            original_image = pygame.image.load(image_filename).convert_alpha()
-            self.image = pygame.transform.scale(original_image, (desired_width, desired_height))
-            self.rect = self.image.get_rect()
-
-    def change_weapon(self, new_weapon):
-        global selected_weapon
-        if new_weapon in weapon_icons:
-            self.selected_weapon = new_weapon
-            self.load_weapon_icon()
+        # Resize the image to the desired dimensions
+        self.image = pygame.transform.scale(original_image, (desired_width, desired_height))
+        self.rect = self.image.get_rect()
 
     def update(self):
         if self.rect.y >= 780:
@@ -339,6 +346,20 @@ def backround_decoration(screen):
     pygame.draw.rect(screen, darkBrown, (10, 10, display_width - 20, display_height - 20), 10)
     pygame.draw.rect(screen, lighterBrown, (20, 20, display_width - 40, display_height - 40), 5)
 
+def health_symbols():
+    # Create Health_Animation sprites
+    for hpE1 in range(1):
+        health_animation = Health_Animation()
+        health_animation.rect.x = 200
+        health_animation.rect.y = 150
+        health_animation_group.add(health_animation)
+    for hpE2 in range(1):
+        health_animation = Health_Animation()
+        health_animation.rect.x = 450
+        health_animation.rect.y = 150
+        health_animation_group.add(health_animation)
+    respawn_enemies()
+
 # -----Sprites----- # -------------------------------------------------------------------------------------------------------------------------------
 
 pygame.init()
@@ -372,7 +393,6 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_r:
                 game = True
-                #weapon_selection = "blue"
                 restart_screen = False
 
         # quit to menu
@@ -390,18 +410,6 @@ while running:
                 accounts_screen = False
                 options_screen = True
 
-        # player firing
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and game:
-                bullet = Bullet()
-
-                # Set the bullet so it is where the player is
-                bullet.rect.x = player.rect.x
-                bullet.rect.y = player.rect.y
-
-                # Add the bullet to the lists
-                bullet_group.add(bullet)
-
         # moving the player
         if event.type == pygame.KEYDOWN:
             key_state[event.key] = True
@@ -412,7 +420,6 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE and menu:
                 menu = False
-                #weapon_selection = "blue"
                 restart_screen = False
                 game = True
                 phase1 = True
@@ -468,97 +475,40 @@ while running:
                 mouse_x, mouse_y = pygame.mouse.get_pos()
 
                 if 100 <= mouse_x <= 400 and 100 <= mouse_y <= 700:
-                    selected_weapon = "green"
-                    player = Player(selected_weapon)
+                    WBlue = False
+                    WGreen = True
+                    WYellow = False
+                    WRed = False
                     weapon_selection = False
                     game = True
                     if EASY:
-                        # Create Health_Animation sprites
-                        for hpE1 in range(1):
-                            health_animation = Health_Animation()
-                            health_animation.rect.x = 200
-                            health_animation.rect.y = 150
-                            health_animation_group.add(health_animation)
-                        for hpE2 in range(1):
-                            health_animation = Health_Animation()
-                            health_animation.rect.x = 450
-                            health_animation.rect.y = 150
-                            health_animation_group.add(health_animation)
-
+                        health_symbols()
                     if MEDIUM:
-                        # Create Health_Animation sprites
-                        for hpM1 in range(1):
-                            health_animation = Health_Animation()
-                            health_animation.rect.x = 200
-                            health_animation.rect.y = 150
-                            health_animation_group.add(health_animation)
-                        for hpM2 in range(1):
-                            health_animation = Health_Animation()
-                            health_animation.rect.x = 450
-                            health_animation.rect.y = 150
-                            health_animation_group.add(health_animation)
+                        health_symbols()
 
                 if 485 <= mouse_x <= 785 and 100 <= mouse_y <= 700:
-                    selected_weapon = "yellow"
-                    player = Player(selected_weapon)
+                    WBlue = False
+                    WGreen = False
+                    WYellow = True
+                    WRed = False
                     weapon_selection = False
                     game = True
                     if EASY:
-                        # Create Health_Animation sprites
-                        for hpE1 in range(1):
-                            health_animation = Health_Animation()
-                            health_animation.rect.x = 200
-                            health_animation.rect.y = 150
-                            health_animation_group.add(health_animation)
-                        for hpE2 in range(1):
-                            health_animation = Health_Animation()
-                            health_animation.rect.x = 450
-                            health_animation.rect.y = 150
-                            health_animation_group.add(health_animation)
-
+                        health_symbols()
                     if MEDIUM:
-                        # Create Health_Animation sprites
-                        for hpM1 in range(1):
-                            health_animation = Health_Animation()
-                            health_animation.rect.x = 200
-                            health_animation.rect.y = 150
-                            health_animation_group.add(health_animation)
-                        for hpM2 in range(1):
-                            health_animation = Health_Animation()
-                            health_animation.rect.x = 450
-                            health_animation.rect.y = 150
-                            health_animation_group.add(health_animation)
+                        health_symbols()
 
                 if 870 <= mouse_x <= 1170 and 100 <= mouse_y <= 700:
-                    selected_weapon = "red"
-                    player = Player(selected_weapon)
+                    WBlue = False
+                    WGreen = False
+                    WYellow = False
+                    WRed = True
                     weapon_selection = False
                     game = True
                     if EASY:
-                        # Create Health_Animation sprites
-                        for hpE1 in range(1):
-                            health_animation = Health_Animation()
-                            health_animation.rect.x = 200
-                            health_animation.rect.y = 150
-                            health_animation_group.add(health_animation)
-                        for hpE2 in range(1):
-                            health_animation = Health_Animation()
-                            health_animation.rect.x = 450
-                            health_animation.rect.y = 150
-                            health_animation_group.add(health_animation)
-
+                        health_symbols()
                     if MEDIUM:
-                        # Create Health_Animation sprites
-                        for hpM1 in range(1):
-                            health_animation = Health_Animation()
-                            health_animation.rect.x = 200
-                            health_animation.rect.y = 150
-                            health_animation_group.add(health_animation)
-                        for hpM2 in range(1):
-                            health_animation = Health_Animation()
-                            health_animation.rect.x = 450
-                            health_animation.rect.y = 150
-                            health_animation_group.add(health_animation)
+                        health_symbols()
 
     # --Menu-- # -------------------------------------------------------------------------------------------------------------------------------
     if menu == True:
@@ -568,6 +518,14 @@ while running:
 
         # game title
         screen.blit(game_title_icon, (380, 40))
+
+        # pirate and alien decoration
+        screen.blit(pirate, (80, 300))
+        screen.blit(alien, (1040, 350))
+
+        # epilepsy warning
+        warning_text = warning_font.render("EPILEPSY WARNING!", 300, red)
+        screen.blit(warning_text, (850, 720))
 
         # button variables
         button_width = 240
@@ -708,6 +666,7 @@ while running:
             if HARD:
                 difficulty_text3 = small_font.render("Hard", True, green)
                 screen.blit(difficulty_text3, (420, 100 + 3 * 50))
+
 
     # --Restart screen-- # -------------------------------------------------------------------------------------------------------------------------------
     elif restart_screen == True:
@@ -866,6 +825,31 @@ while running:
         if key_held(pygame.K_w) and player.rect.y > 50:
             player.rect.y -= 10
 
+        # player starts shooting
+        bullet_timer = pygame.time.get_ticks()
+        print(bullet_timer)
+        if WBlue:
+            weapon_delay = 1000 #10 for testing
+        if WGreen:
+            weapon_delay = 200
+        if WYellow:
+            weapon_delay = 5000
+        if WRed:
+            weapon_delay = 2000
+
+        if bullet_timer - last_shot_time >= weapon_delay:
+            bullet = Bullet()
+
+            # Set the bullet so it is where the player is
+            bullet.rect.x = player.rect.x
+            bullet.rect.y = player.rect.y
+
+            # Add the bullet to the lists
+            bullet_group.add(bullet)
+
+            # Reset the bullet timer
+            last_shot_time = bullet_timer
+
         # boss shooting
         if phase2:
             if EASY or MEDIUM:
@@ -951,7 +935,9 @@ while running:
         if current_time - last_hit_time >= buffer_time:
             buffer = False
 
+
         # calculate mechanics for player being hit by the enemy (player health and being hit)
+        current_timev2 = pygame.time.get_ticks()
         if buffer2 == False:
             for shoot in shoot_group:
                 current_time = pygame.time.get_ticks()
@@ -962,6 +948,16 @@ while running:
                         all_sprites_list.remove(shoot)
                         player_health -= 1
                         buffer2 = True
+                        # screen flash red when hit
+                        if show_red_flash:
+                            # Fill the screen with red
+                            screen.fill((255, 0, 0))  # Red color
+
+                            # Check if the red flash duration has passed
+                            if current_timev2 - red_flash_start_time >= red_flash_duration:
+                                show_red_flash = False
+
+
                     if shoot.rect.x < -10 or shoot.rect.x > 1400:
                         shoot_group.remove(shoot)
                         all_sprites_list.remove(shoot)
@@ -970,6 +966,9 @@ while running:
         current_time = pygame.time.get_ticks()
         if current_time - last_hit_time2 >= buffer_time:
             buffer2 = False
+            # reset flash
+            show_red_flash = True
+            red_flash_start_time = current_timev2
 
         # player dies
         if player_health <= 0:
@@ -984,9 +983,8 @@ while running:
             for h in player_group:
                 player_group.remove(h)
 
-        # choosing weapons
+        # choosing weapons pop-up
         if weapon_selection:
-            screen.fill(black)
             # remove others sprites from screen
             game = False
             for e in bullet_group:
@@ -996,12 +994,21 @@ while running:
             for g in health_animation_group:
                 health_animation_group.remove(g)
 
-            # draw on new screen
-            player.rect. y = 800
+            screen.fill(black)
+
+            # show origonal ship
+            player.rect. y = 740
+            player_current_text = font.render("Current player:", 300, white)
+            screen.blit(player_current_text, (10, 740))
+
+            # draw pop-ups
+            scoreTxt = small_font.render(f"Score: {score}", False, white)
+            screen.blit(scoreTxt, (10, 10))
 
             screen.blit(green_button, (100, 100))
             screen.blit(yellow_button, (485, 100))
             screen.blit(red_button, (870, 100))
+
 
         # sprites update
         enemy_group.update()
@@ -1039,4 +1046,3 @@ while running:
     # updating the gamme window
     pygame.display.flip()
     clock.tick(75)
-
