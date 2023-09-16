@@ -119,6 +119,7 @@ yellow = (255, 255, 0)
 darkPurple = (48, 25, 52)
 darkBrown = (10, 10, 10)
 lighterBrown = (100, 70, 60)
+orange = (255, 165, 0)
 
 # images variables
 game_title_icon = pygame.image.load("gameTitle_icon.png").convert_alpha()
@@ -235,8 +236,8 @@ class Player(pygame.sprite.Sprite):
 class Bullet(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface([15, 10])
-        self.image.fill(white)
+        bullets_icon = pygame.image.load("bullets.png").convert_alpha()
+        self.image = pygame.transform.scale(bullets_icon, (15, 10))
         self.rect = self.image.get_rect()
 
     def update(self):
@@ -245,18 +246,18 @@ class Bullet(pygame.sprite.Sprite):
 class Big_bullet(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface([25, 25])
-        self.image.fill(white)
+        big_bullets_icon = pygame.image.load("bullets.png").convert_alpha()
+        self.image = pygame.transform.scale(big_bullets_icon, (60, 40))
         self.rect = self.image.get_rect()
 
     def update(self):
-        self.rect.x += 3
+        self.rect.x += 6
 
 class Shoot(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface([15, 10])
-        self.image.fill(red)
+        shoot_icon = pygame.image.load("shoot_icon.png").convert_alpha()
+        self.image = pygame.transform.scale(shoot_icon, (15, 10))
         self.rect = self.image.get_rect()
 
     def update(self):
@@ -370,6 +371,7 @@ all_sprites_list = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
+big_bullet_group = pygame.sprite.Group()
 shoot_group = pygame.sprite.Group()
 boss_group = pygame.sprite.Group()
 health_animation_group = pygame.sprite.Group()
@@ -509,6 +511,7 @@ while running:
                         health_symbols()
                     if MEDIUM:
                         health_symbols()
+
 
     # --Menu-- # -------------------------------------------------------------------------------------------------------------------------------
     if menu == True:
@@ -661,10 +664,10 @@ while running:
                 difficulty_text1 = small_font.render("Easy", True, green)
                 screen.blit(difficulty_text1, (260, 100 + 3 * 50))
             if MEDIUM:
-                difficulty_text2 = small_font.render("Medium", True, green)
+                difficulty_text2 = small_font.render("Medium", True, orange)
                 screen.blit(difficulty_text2, (320, 100 + 3 * 50))
             if HARD:
-                difficulty_text3 = small_font.render("Hard", True, green)
+                difficulty_text3 = small_font.render("Hard", True, red)
                 screen.blit(difficulty_text3, (420, 100 + 3 * 50))
 
 
@@ -698,6 +701,8 @@ while running:
             shoot_group.remove(f)
         for g in boss_group:
             boss_group.remove(g)
+        for h in big_bullet_group:
+            big_bullet_group.remove(h)
 
         # reset flags
         added_boss = False
@@ -829,15 +834,15 @@ while running:
         bullet_timer = pygame.time.get_ticks()
         print(bullet_timer)
         if WBlue:
-            weapon_delay = 1000 #10 for testing
+            weapon_delay = 10 #10 for testing
         if WGreen:
             weapon_delay = 200
         if WYellow:
-            weapon_delay = 5000
+            weapon_delay = 3500
         if WRed:
-            weapon_delay = 2000
+            weapon_delay = 1000
 
-        if bullet_timer - last_shot_time >= weapon_delay:
+        if bullet_timer - last_shot_time >= weapon_delay and WYellow == False:
             bullet = Bullet()
 
             # Set the bullet so it is where the player is
@@ -846,6 +851,19 @@ while running:
 
             # Add the bullet to the lists
             bullet_group.add(bullet)
+
+            # Reset the bullet timer
+            last_shot_time = bullet_timer
+
+        if bullet_timer - last_shot_time >= weapon_delay and WYellow == True:
+            big_bullet = Big_bullet()
+
+            # Set the bullet so it is where the player is
+            big_bullet.rect.x = player.rect.x
+            big_bullet.rect.y = player.rect.y
+
+            # Add the bullet to the lists
+            big_bullet_group.add(big_bullet)
 
             # Reset the bullet timer
             last_shot_time = bullet_timer
@@ -900,41 +918,76 @@ while running:
                     shoot.rect.y = enemy.rect.y
                     shoot_group.add(shoot)
 
-        # calculate mechanics for each bullet
-        if phase1:
-            for bullet in bullet_group:
+        if WYellow == False:
+            # calculate mechanics for each bullet
+            if phase1:
 
-                # See if it hit a block
-                block_hit_list = pygame.sprite.spritecollide(bullet, enemy_group, True)
+                for bullet in bullet_group:
 
-                # For each block hit, remove the bullet and add to the score
-                for enemy in block_hit_list:
-                    bullet_group.remove(bullet)
-                    all_sprites_list.remove(bullet)
-                    score += 1
-                    enemies_dead += 1
+                    # See if it hit a block
+                    block_hit_list = pygame.sprite.spritecollide(bullet, enemy_group, True)
 
-                # Remove the bullet if it flies up off the screen
-                if bullet.rect.x < -10 or bullet.rect.x > 1400:
-                    bullet_group.remove(bullet)
-                    all_sprites_list.remove(bullet)
+                    # For each block hit, remove the bullet and add to the score
+                    for enemy in block_hit_list:
+                        bullet_group.remove(bullet)
+                        all_sprites_list.remove(bullet)
+                        score += 1
+                        enemies_dead += 1
 
-        # boss getting hit and health (buffer is the time until the boss can be hit again)
-        if phase2 and buffer == False:
+                    # Remove the bullet if it flies up off the screen
+                    if bullet.rect.x < -10 or bullet.rect.x > 1400:
+                        bullet_group.remove(bullet)
+                        all_sprites_list.remove(bullet)
+
+            # boss getting hit and health (buffer is the time until the boss can be hit again)
+            if phase2 and buffer == False:
+                current_time = pygame.time.get_ticks()
+                if current_time - last_hit_time >= buffer_time:
+                    for bullet in bullet_group:
+                        if bullet.rect.colliderect(boss.rect):
+                            boss.health -= 1
+                            score += 1
+                            buffer = True
+                            last_hit_time = current_time
+
+            # reset buffer
             current_time = pygame.time.get_ticks()
             if current_time - last_hit_time >= buffer_time:
-                for bullet in bullet_group:
-                    if bullet.rect.colliderect(boss.rect):
-                        boss.health -= 1
+                buffer = False
+
+        if WYellow == True:
+            # calculate mechanics for each big_bullet
+            if phase1:
+                for big_bullets in big_bullet_group:
+
+                    # See if it hit a block
+                    block_hit_list_big = pygame.sprite.spritecollide(big_bullet, enemy_group, True)
+
+                    # For each block hit, add to the score
+                    for enemy in block_hit_list_big:
                         score += 1
-                        buffer = True
-                        last_hit_time = current_time
+                        enemies_dead += 1
 
-        # reset buffer
-        current_time = pygame.time.get_ticks()
-        if current_time - last_hit_time >= buffer_time:
-            buffer = False
+                    # Remove the big_bullet if it flies up off the screen
+                    if bullet.rect.x < -10 or bullet.rect.x > 1400:
+                        big_bullet_group.remove(big_bullet)
+                        all_sprites_list.remove(big_bullet)
 
+            # boss getting hit and health (buffer is the time until the boss can be hit again) but for the big_bullet one shot
+            if phase2 and buffer3 == False:
+                current_time3 = pygame.time.get_ticks()
+                if current_time3 - last_hit_time >= buffer_time:
+                    for big_bullets in big_bullet_group:
+                        if big_bullet.rect.colliderect(boss.rect):
+                            boss.health -= 1
+                            score += 1
+                            buffer3 = True
+                            last_hit_time = current_time
+
+            # reset buffer3
+            current_time3 = pygame.time.get_ticks()
+            if current_time3 - last_hit_time >= buffer_time:
+                buffer3 = False
 
         # calculate mechanics for player being hit by the enemy (player health and being hit)
         current_timev2 = pygame.time.get_ticks()
@@ -951,7 +1004,7 @@ while running:
                         # screen flash red when hit
                         if show_red_flash:
                             # Fill the screen with red
-                            screen.fill((255, 0, 0))  # Red color
+                            screen.fill((255, 0, 0))
 
                             # Check if the red flash duration has passed
                             if current_timev2 - red_flash_start_time >= red_flash_duration:
@@ -993,6 +1046,8 @@ while running:
                 shoot_group.remove(f)
             for g in health_animation_group:
                 health_animation_group.remove(g)
+            for h in big_bullet_group:
+                big_bullet_group.remove(h)
 
             screen.fill(black)
 
@@ -1014,6 +1069,7 @@ while running:
         enemy_group.update()
         player_group.update()
         bullet_group.update()
+        big_bullet_group.update()
         shoot_group.update()
         boss_group.update()
         health_animation_group.update()
@@ -1025,6 +1081,7 @@ while running:
 
         # draw sprites
         bullet_group.draw(screen)
+        big_bullet_group.draw(screen)
         shoot_group.draw(screen)
         health_animation_group.draw(screen)
 
