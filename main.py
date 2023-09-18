@@ -217,7 +217,7 @@ class Boss(pygame.sprite.Sprite):
                     self.down = True
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, image_no):
         super().__init__()
         # Load the player's icon image
         original_image = pygame.image.load("player_icon.png").convert_alpha()
@@ -230,8 +230,18 @@ class Player(pygame.sprite.Sprite):
         desired_height = 32
 
         # Resize the image to the desired dimensions
-        self.image = pygame.transform.scale(original_image, (desired_width, desired_height))
-        self.rect = self.image.get_rect()
+        if image_no == 1:
+            self.image = pygame.transform.scale(original_image, (desired_width, desired_height))
+            self.rect = self.image.get_rect()
+        elif image_no == 2:
+            self.image = pygame.transform.scale(green_image, (desired_width, desired_height))
+            self.rect = self.image.get_rect()
+        elif image_no == 3:
+            self.image = pygame.transform.scale(yellow_image, (desired_width, desired_height))
+            self.rect = self.image.get_rect()
+        elif image_no == 4:
+            self.image = pygame.transform.scale(red_image, (desired_width, desired_height))
+            self.rect = self.image.get_rect()
 
     def update(self):
         if self.rect.y >= 780:
@@ -310,8 +320,8 @@ def spawn():
 
     # player
     if added_player == False:
-        player = Player()
-        player.rect.y = 1
+        player = Player(1)
+        player.rect.y = 400
         player_group.add(player)
         player.rect.x = 200
         added_player = True
@@ -494,6 +504,14 @@ while running:
                     if MEDIUM:
                         health_symbols()
 
+                    #reset player to reset image (2)
+                    for q in player_group:
+                        player_group.remove(q)
+                    player = Player(2)
+                    player.rect.y = 400
+                    player_group.add(player)
+                    player.rect.x = 200
+
                 if 485 <= mouse_x <= 785 and 100 <= mouse_y <= 700:
                     WBlue = False
                     WGreen = False
@@ -506,6 +524,14 @@ while running:
                     if MEDIUM:
                         health_symbols()
 
+                    #reset player to reset image (2)
+                    for q in player_group:
+                        player_group.remove(q)
+                    player = Player(3)
+                    player.rect.y = 400
+                    player_group.add(player)
+                    player.rect.x = 200
+
                 if 870 <= mouse_x <= 1170 and 100 <= mouse_y <= 700:
                     WBlue = False
                     WGreen = False
@@ -517,6 +543,14 @@ while running:
                         health_symbols()
                     if MEDIUM:
                         health_symbols()
+
+                    #reset player to reset image (2)
+                    for q in player_group:
+                        player_group.remove(q)
+                    player = Player(4)
+                    player.rect.y = 400
+                    player_group.add(player)
+                    player.rect.x = 200
 
 
     # --Menu-- # -------------------------------------------------------------------------------------------------------------------------------
@@ -838,7 +872,7 @@ while running:
         # player starts shooting
         bullet_timer = pygame.time.get_ticks()
         if WBlue:
-            weapon_delay = 10 #10 for testing
+            weapon_delay = 500 #10 for testing
         if WGreen:
             weapon_delay = 200
         if WYellow:
