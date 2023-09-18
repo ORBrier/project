@@ -61,6 +61,9 @@ WYellow = False
 WRed = False
 bullet_timer = 0
 last_shot_time = 0
+explode = False
+explode_duration = 1000
+explode_time = 0
 
 # other flags
 added_player = False
@@ -130,6 +133,9 @@ pirate = pygame.transform.scale(pirate, (200, 300))
 
 alien = pygame.image.load("alien.png").convert_alpha()
 alien = pygame.transform.scale(alien, (250, 250))
+
+explotion = pygame.image.load("Explotion_animation.png").convert_alpha()
+explotion = pygame.transform.scale(explotion, (300, 300))
 
 # for deco: pygame.draw.polygon(screen, color, (point-x, point-y, point-z))
 
@@ -782,7 +788,7 @@ while running:
                 boss_group.remove(boss)
                 all_sprites_list.remove(boss)
                 weapon_selection = True # select weapon
-                #respawn_enemies()  # Respawn enemies for the next phase
+
         if MEDIUM:
             if phase2 and boss.health <= 0:
                 boss.health = 10  # Reset the boss's health
@@ -792,7 +798,7 @@ while running:
                 boss_group.remove(boss)
                 all_sprites_list.remove(boss)
                 weapon_selection = True # select weapon
-                #respawn_enemies()  # Respawn enemies for the next phase
+
         if HARD:
             if phase2 and boss.health <= 0:
                 boss.health = 10  # Reset the boss's health
@@ -801,7 +807,6 @@ while running:
                 boss_group.remove(boss)
                 all_sprites_list.remove(boss)
                 weapon_selection = True # select weapon
-                #respawn_enemies()  # Respawn enemies for the next phase
 
         # backround design
         screen.fill(black)
@@ -832,15 +837,14 @@ while running:
 
         # player starts shooting
         bullet_timer = pygame.time.get_ticks()
-        print(bullet_timer)
         if WBlue:
             weapon_delay = 10 #10 for testing
         if WGreen:
             weapon_delay = 200
         if WYellow:
-            weapon_delay = 3500
+            weapon_delay = 2000
         if WRed:
-            weapon_delay = 1000
+            weapon_delay = 500
 
         if bullet_timer - last_shot_time >= weapon_delay and WYellow == False:
             bullet = Bullet()
@@ -929,10 +933,31 @@ while running:
 
                     # For each block hit, remove the bullet and add to the score
                     for enemy in block_hit_list:
+                        # Spawn explostion
+                        if explode == True and WRed == True:
+                            # draw explostion img
+                            screen.blit(explotion, (enemy.rect.x-150, enemy.rect.y-150))
+                            # Check if the explostion duration has passed
+                            if current_time - explode_time >= explode_duration:
+                                explode = False
                         bullet_group.remove(bullet)
                         all_sprites_list.remove(bullet)
                         score += 1
                         enemies_dead += 1
+
+                        # enemies nearby get killed by the explotion
+                        if WRed:
+                            # Check for nearby enemies
+                            for other_enemy in enemy_group:
+                                if enemy != other_enemy:
+                                    # Calculate the distance between the two enemies' centers
+                                    distance = pygame.math.Vector2(enemy.rect.center).distance_to(other_enemy.rect.center)
+                                    if distance <= 150:
+                                        # Remove the nearby enemy
+                                        enemy_group.remove(other_enemy)
+                                        all_sprites_list.remove(other_enemy)
+                                        score += 1
+                                        enemies_dead += 1
 
                     # Remove the bullet if it flies up off the screen
                     if bullet.rect.x < -10 or bullet.rect.x > 1400:
@@ -950,10 +975,13 @@ while running:
                             buffer = True
                             last_hit_time = current_time
 
-            # reset buffer
-            current_time = pygame.time.get_ticks()
-            if current_time - last_hit_time >= buffer_time:
-                buffer = False
+        # reset buffer
+        current_time = pygame.time.get_ticks()
+        if current_time - last_hit_time >= buffer_time:
+            buffer = False
+            # reset explotion
+            explode = True
+            explode_time = current_time
 
         if WYellow == True:
             # calculate mechanics for each big_bullet
@@ -982,12 +1010,12 @@ while running:
                             boss.health -= 1
                             score += 1
                             buffer3 = True
-                            last_hit_time = current_time
+                            last_hit_time = current_time3
 
-            # reset buffer3
-            current_time3 = pygame.time.get_ticks()
-            if current_time3 - last_hit_time >= buffer_time:
-                buffer3 = False
+        # reset buffer3
+        current_time3 = pygame.time.get_ticks()
+        if current_time3 - last_hit_time >= buffer_time:
+            buffer3 = False
 
         # calculate mechanics for player being hit by the enemy (player health and being hit)
         current_timev2 = pygame.time.get_ticks()
@@ -1033,6 +1061,10 @@ while running:
             game = False
             dead = False
             player_health = 3
+            WBlue = True
+            WGreen = False
+            WYellow = False
+            WRed = False
             for h in player_group:
                 player_group.remove(h)
 
